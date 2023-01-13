@@ -1,139 +1,136 @@
-import java.util.function.Function;
-import javax.imageio.ImageIO;
-import java.util.ArrayList;
 import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.function.Function;
+
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.border.LineBorder;
 
 public final class App {
-  private static final class Pixel extends Pair<Integer, Double> {
-    public Pixel(Integer first, Double second) {
-      super(first, second);
-    }
+  public static final int DEFAULT_WIDTH = 512;
+
+  public static Pair<JPanel, JTextField> makeField(String text, String initial) {
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    JLabel label = new JLabel(text);
+    JTextField field = new JTextField(initial);
+    panel.add(label);
+    panel.add(field);
+    panel.setAlignmentX(Box.CENTER_ALIGNMENT);
+    return new Pair<>(panel, field);
   }
 
-  // changeable
-  private static int SIZE = 2600;
-  private static double MAX_ITER = 1024;
-  private static Point diff = new Point(2d, 2d);
-  private static Point centre = new Point(0d, 0d);
-
-  // calculated (unchangeable)
-  private static Point min = centre.sub(diff);
-  private static Point max = centre.add(diff);
-
-  public static Function<Complex, Complex> poly(Double... coeffs) {
-    return (n) -> {
-      Complex out = new Complex(0, 0);
-
-      for (int i = 0, j = coeffs.length - 1; i < coeffs.length; i++, j--) {
-        out = out.add(n.pow(j).multiply(coeffs[i]));
-      }
-
-      return out;
-    };
+  public static JPanel horizontal(JPanel first, JPanel second) {
+    JPanel combined = new JPanel();
+    combined.setLayout(new BoxLayout(combined, BoxLayout.X_AXIS));
+    combined.add(first);
+    combined.add(second);
+    combined.setAlignmentX(Box.CENTER_ALIGNMENT);
+    return combined;
   }
-
-  public static Double[] diff(Double... coeffs) {
-    Double[] diffCoeffs = new Double[coeffs.length - 1];
-
-    for (int i = 0, j = coeffs.length - 1; j > 0; i++, j--) {
-      diffCoeffs[i] = coeffs[i] * j;
-    }
-
-    return diffCoeffs;
-  }
-
-  public static Pair<Complex, Double> newton(Function<Complex, Complex> f, Function<Complex, Complex> df, Complex x) {
-    double i = 0;
-
-    for (; i < MAX_ITER; i++) {
-      Complex xTemp = x;
-      x = x.sub(f.apply(x).divide(df.apply(x)));
-      if (xTemp.equals(x))
-        break;
-    }
-
-    return new Pair<>(x, i);
-  }
-
-  public static Complex sin(Complex z) {
-    return new Complex(Math.sin(z.real) * Math.cosh(z.imag), Math.cos(z.real) * Math.sinh(z.imag));
-  }
-
-  public static Complex cos(Complex z) {
-    return new Complex(Math.cos(z.real) * Math.cosh(z.imag), Math.sin(z.real) * Math.sinh(z.imag));
-  }
-
-  public static Complex sinh(Complex z) {
-    return new Complex(Math.sinh(z.real) * Math.cos(z.imag), Math.cosh(z.real) * Math.sin(z.imag));
-  }
-
-  public static Complex cosh(Complex z) {
-    return new Complex(Math.cosh(z.real) * Math.cos(z.imag), Math.sinh(z.real) * Math.sin(z.imag));
-  }
-
   public static void main(String[] args) {
-    // Double[] coeffs = new Double[] { 1d, 0d, -2d, 2d };
-    Double[] coeffs = new Double[] { 0d, 7d, 7d, 5d, 3d, 8d, 3d, 7d, 8d, 7d, 9d };
-    Function<Complex, Complex> f = poly(coeffs);
-    Function<Complex, Complex> df = poly(diff(coeffs));
-
-    ArrayList<Complex> roots = new ArrayList<Complex>();
-    Pixel[][] pixels = new Pixel[SIZE][SIZE];
-
-    for (int i = 0; i < SIZE; i++) {
-      if (i % 16 == 0) {
-        System.out.println(i);
+    Dimension size = new Dimension(1000, 1000);
+    JFrame frame = new JFrame();
+    frame.setSize(size);
+    JPanel content = new JPanel();
+    content.setSize(size);
+    content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+    JPanel settings = new JPanel();
+    settings.setLayout(new BoxLayout(settings, BoxLayout.Y_AXIS));
+    Pair<JPanel, JTextField> eq = makeField("Equation:", "z^2 + 1"),
+      minX = makeField("Min X:", "-2.0"),
+      maxX = makeField("Max X:", "2.0"),
+      minY = makeField("Min Y:", "-2.0"),
+      maxY = makeField("Max Y:", "2.0"),
+      width = makeField("Width of Image:", String.valueOf(DEFAULT_WIDTH));
+    JButton button = new JButton("Draw");
+    settings.add(eq.first);
+    settings.add(horizontal(minX.first, maxX.first));
+    settings.add(horizontal(minY.first, maxY.first));
+    settings.add(width.first);
+    settings.add(button);
+    button.setAlignmentX(Box.CENTER_ALIGNMENT);
+    content.add(settings);
+    ImageComponent image = new ImageComponent(DEFAULT_WIDTH, DEFAULT_WIDTH);
+    image.setPreferredSize(size);
+    image.setBorder(new LineBorder(Color.BLACK, 2, true));
+    content.add(image);
+    frame.setContentPane(content);
+    frame.setVisible(true);
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    button.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        drawImage(image, eq.second.getText(), minX.second.getText(), maxX.second.getText(), minY.second.getText(), maxY.second.getText(), width.second.getText());
       }
+    });
+  }  
 
-      double a = (max.second - min.second) * ((double) i / SIZE) + min.second;
+  public static void drawImage(ImageComponent image, String eq_s, String minX_s, String maxX_s, String minY_s, String maxY_s, String width_s) {
+    // TODO parse equation from string
+    Function<Complex, Complex> f = Equation.poly(1d, 0d, 0d, -1d);
+    Function<Complex, Complex> df = Equation.poly(3d, 0d, 0d);
+    double minX = Double.valueOf(minX_s);
+    double maxX = Double.valueOf(maxX_s);
+    double minY = Double.valueOf(minY_s);
+    double maxY = Double.valueOf(maxY_s);
+    double width = Double.valueOf(width_s);
+    double aspect = (maxY - minY) / (maxX - minX);
+    double height = Math.floor(width * aspect);
+    Dimension dim = new Dimension((int) width, (int) height);
+    System.out.println(minX+","+maxX+","+minY+","+maxY+","+width+","+aspect+","+dim);
+    image.setPreferredSize(dim);
+    Graphics2D g2d = (Graphics2D) image.getGraphics();
 
-      for (int j = 0; j < SIZE; j++) {
-        double b = (max.first - min.first) * ((double) j / SIZE) + min.first;
+    double incrementX = (maxX - minX) / width;
+    double incrementY = (maxY - minY) / height;
 
-        Pair<Complex, Double> res = newton(f, df, new Complex(a, b));
-        if (res.second < MAX_ITER) {
-          boolean found = false;
-          int root = 0;
+    Newton newton = new Newton(f, df, (int) width, 1024, minX, maxX, minY, maxY);
 
-          for (; root < roots.size(); root++) {
-            if (roots.get(root).equals(res.first)) {
-              found = true;
-              break;
-            }
-          }
+    ArrayList<Complex> list = new ArrayList<>();
+    ArrayList<Pair<Integer, Integer>> pairs = new ArrayList<>();
 
-          if (!found) {
-            roots.add(res.first);
-          }
-
-          pixels[i][j] = new Pixel(root, (res.second / MAX_ITER));
-        } else {
-          pixels[i][j] = new Pixel(-1, 1d);
+    for (int x=0; x<width; x++) {
+      for (int y=0; y<height; y++) {
+        Complex pt = new Complex(minX + incrementX * x, minY + incrementY * y);
+        Pair<Complex, Integer> data = newton.newton(pt);
+        int idx = list.indexOf(data.first);
+        if (idx == -1) {
+          idx = list.size();
+          list.add(data.first);
         }
+        pairs.add(new Pair<>(idx, data.second));
       }
     }
 
-    BufferedImage bi = new BufferedImage(SIZE, SIZE, BufferedImage.TYPE_INT_RGB);
-
-    for (int i = 0; i < SIZE; i++) {
-      for (int j = 0; j < SIZE; j++) {
-        Pixel pixel = pixels[i][j];
-        int color = Color.HSBtoRGB(pixel.first.floatValue() / (float) roots.size(), 1f,
-            (float) Math.pow(1 - pixel.second, 50));
-
-        bi.setRGB(i, j, color);
-      }
+    int n_hues = list.size();
+    float[] hues = new float[n_hues];
+    for (int i=0; i<n_hues; i++) {
+      float hue = (float) i / (float) n_hues;
+      hues[i] = hue;
     }
 
-    File file = new File("fractal_banner.png");
-
-    try {
-      ImageIO.write(bi, "png", file);
-    } catch (IOException e) {
-      e.printStackTrace();
+    int i = 0;
+    for (int x=0; x<width; x++) {
+      for (int y=0; y<height; y++, i++) {
+        Pair<Integer, Integer> pair = pairs.get(i);
+        int hue_i = pair.first, iter = pair.second;
+        float hue = hues[hue_i];
+        float saturation = 1;
+        float brightness = (float) Math.pow(1d - ((double) iter / 1024d), 100d);
+        Color color = Color.getHSBColor(hue, saturation, brightness);
+        g2d.setColor(color);
+        g2d.fillRect(x, y, 1, 1);
+      }
     }
   }
 }
