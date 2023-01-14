@@ -4,6 +4,7 @@ import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.function.Function;
 
 import javax.swing.Box;
@@ -97,8 +98,8 @@ public final class App {
   public static void prepareImage(ImageComponent image, String eq_s, String minX_s, String maxX_s, String minY_s,
       String maxY_s, String width_s) {
     // TODO parse equation from string
-    Function<Complex, Complex> f = Equation.poly(1d, 0d, 0d, -1d);
-    Function<Complex, Complex> df = Equation.poly(3d, 0d, 0d);
+    Function<Complex, Complex> f = (c) -> new Complex(Math.cos(c.real) * Math.cosh(c.imag), -Math.sin(c.real) * Math.sinh(c.imag));
+    Function<Complex, Complex> df = (c) -> new Complex(Math.sin(c.real) * Math.cosh(c.imag), Math.cos(c.real) * Math.sinh(c.imag));
     double minX = Double.valueOf(minX_s);
     double maxX = Double.valueOf(maxX_s);
     double minY = Double.valueOf(minY_s);
@@ -129,8 +130,10 @@ public final class App {
         Pair<Complex, Integer> data = newton.newton(pt);
         int idx = list.indexOf(data.first);
         if (idx == -1) {
-          idx = list.size();
-          list.add(data.first);
+          if (data.second != 1024) {
+            idx = list.size();
+            list.add(data.first);
+          }
         }
         pairs.add(new Pair<>(idx, data.second));
       }
@@ -143,12 +146,14 @@ public final class App {
       hues[i] = hue;
     }
 
+    System.out.println(Arrays.toString(hues));
+
     int i = 0;
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++, i++) {
         Pair<Integer, Integer> pair = pairs.get(i);
         int hue_i = pair.first, iter = pair.second;
-        float hue = hues[hue_i];
+        float hue = hue_i == -1 ? 0 : hues[hue_i];
         float saturation = 1;
         float brightness = (float) Math.pow(1d - ((double) iter / 1024d), 100d);
         Color color = Color.getHSBColor(hue, saturation, brightness);

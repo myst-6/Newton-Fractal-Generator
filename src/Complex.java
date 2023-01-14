@@ -1,5 +1,5 @@
 public final class Complex {
-    private static Double TOL = 1e-3;
+    private static Double TOL = 1e-6;
 
     public double real, imag;
 
