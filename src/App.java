@@ -97,9 +97,9 @@ public final class App {
 
   public static void prepareImage(ImageComponent image, String eq_s, String minX_s, String maxX_s, String minY_s,
       String maxY_s, String width_s) {
-    // TODO parse equation from string
-    Function<Complex, Complex> f = (c) -> new Complex(Math.cos(c.real) * Math.cosh(c.imag), -Math.sin(c.real) * Math.sinh(c.imag));
-    Function<Complex, Complex> df = (c) -> new Complex(Math.sin(c.real) * Math.cosh(c.imag), Math.cos(c.real) * Math.sinh(c.imag));
+    Equation eq = Equation.parse(eq_s);
+    Function<Complex, Complex> f = eq.f();
+    Function<Complex, Complex> df = eq.derivative().f();
     double minX = Double.valueOf(minX_s);
     double maxX = Double.valueOf(maxX_s);
     double minY = Double.valueOf(minY_s);
