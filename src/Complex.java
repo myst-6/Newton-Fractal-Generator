@@ -4,8 +4,21 @@ public final class Complex {
   public double real, imag;
 
   public static Complex parse(String z) {
-    // TODO parse complex number
-    return new Complex(Double.valueOf(z));
+    if (z.endsWith("i")) {
+      String x = z.substring(0, z.length() - 1);
+      if (x.length() == 0) {
+        return new Complex(0d, 1d);
+      } else {
+        return new Complex(0d, Double.parseDouble(x));
+      }
+    } else {
+      String x = z;
+      return new Complex(Double.parseDouble(x), 0d);
+    }
+  }
+
+  public static Complex fromPolar(double abs, double arg) {
+    return new Complex(abs * Math.cos(arg), abs * Math.sin(arg));
   }
 
   public Complex(double real, double imag) {
@@ -56,6 +69,28 @@ public final class Complex {
     return sub(new Complex(other));
   }
 
+  public double arg() {
+    return Math.atan2(this.imag, this.real);
+  }
+
+  public Complex ln() {
+    return new Complex(Math.log(abs()), arg());
+  }
+
+  public Complex pow(Complex z) {
+    if (z.imag == 0) return pow(z.real);
+    double abs = Math.pow(abs(), z.real) * Math.exp(-z.imag * arg());
+    double arg = z.real * arg() + z.imag * Math.log(abs());
+    return Complex.fromPolar(abs, arg);
+  }
+
+  public Complex pow(double x) {
+    if (x % 1 == 0) return pow((int) x);
+    double abs = Math.pow(abs(), x);
+    double arg = x * arg();
+    return Complex.fromPolar(abs, arg);
+  } 
+
   public Complex pow(int x) {
     Complex out = new Complex(1);
 
@@ -66,18 +101,12 @@ public final class Complex {
     return out;
   }
 
-  public double arg() {
-    return Math.atan2(this.imag, this.real);
+  public Complex sin() {
+    return new Complex(Math.sin(real) * Math.cosh(imag), Math.cos(real) * Math.sinh(real));
   }
 
-  public Complex ln() {
-    // + 2ikpi?
-    return new Complex(Math.log(abs()), arg());
-  }
-
-  public Complex pow(Complex z) {
-    // TODO pow of complex number
-    return pow((int) Math.round(z.abs()));
+  public Complex cos() {
+    return new Complex(Math.cos(real) * Math.cosh(imag), -Math.sin(real) * Math.sinh(real));
   }
 
   @Override
@@ -102,5 +131,9 @@ public final class Complex {
   @Override
   public boolean equals(Object other) {
     return (other instanceof Complex) && this.equals((Complex) other);
+  }
+
+  public static void main(String[] args) {
+    System.out.println(new Complex(1, 1).pow(new Complex(1, 1)));
   }
 }

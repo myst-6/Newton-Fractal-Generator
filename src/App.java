@@ -43,7 +43,7 @@ public final class App {
     return combined;
   }
 
-  public static void main(String[] args) {
+  public App() {
     Dimension size = new Dimension(1024, 1024);
     JFrame frame = new JFrame();
     frame.setSize(size);
@@ -136,6 +136,10 @@ public final class App {
           }
         }
         pairs.add(new Pair<>(idx, data.second));
+        float brightness = (float) Math.pow(1d - ((double) data.second / 1024d), 100d);
+        Color color = Color.getHSBColor(0, 0, brightness);
+        g2d.setColor(color);
+        g2d.fillRect(x, y, 1, 1);
       }
     }
 
@@ -145,8 +149,6 @@ public final class App {
       float hue = (float) i / (float) n_hues;
       hues[i] = hue;
     }
-
-    System.out.println(Arrays.toString(hues));
 
     int i = 0;
     for (int x = 0; x < width; x++) {
@@ -161,5 +163,9 @@ public final class App {
         g2d.fillRect(x, y, 1, 1);
       }
     }
+  }
+
+  public static void main(String[] args) {
+    new App();
   }
 }

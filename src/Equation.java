@@ -215,11 +215,9 @@ public class Equation {
       case SUB:
         return zs.get(0).sub(zs.get(1));
       case COS:
-        // TODO cosine function
-        return null;
+        return z.cos();
       case SIN:
-        // TODO sine function
-        return null;
+        return z.sin();
       case LN:
         return z.ln();
       default:
@@ -274,8 +272,9 @@ public class Equation {
       case SUB:
         return new Equation(Type.SUB, ds.get(0), ds.get(1));
       case COS:
-        // TODO cosine function
-        return null;
+        Equation first = new Equation(Type.MUL, new Equation(Type.SIN, args[0]), new Equation(new Complex(-1d)));
+        Equation second = ds.get(0);
+        return new Equation(Type.MUL, first, second);
       case SIN:
         // TODO sine function
         return null;
