@@ -50,10 +50,9 @@ public class Equation {
   private static ArrayList<Equation> tokenise(String eq) {
     Pattern stringPattern = Pattern.compile("[z*/+\\-^]|\\d+|[a-z]+");
     Matcher m = stringPattern.matcher(eq);
-    ArrayList<MatchResult> matches = (ArrayList<MatchResult>) m.results().collect(Collectors.toList());
     ArrayList<Equation> tokens = new ArrayList<>();
-    for (int i = 0; i < matches.size(); i++) {
-      String token = matches.get(i).group();
+    while (m.find()) {
+      String token = m.group();
       tokens.add(new Equation(token));
     }
     return tokens;
