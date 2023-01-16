@@ -1,2 +1,4 @@
 .replit
 *.class
+replit.nix
+.breakpoints
