@@ -1,7 +1,6 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
@@ -49,12 +48,11 @@ public class Equation {
   // TODO trig^2(x) => (trig(x))^2
   // TODO trig^-1(x) => arctrig(x)
   private static ArrayList<Equation> tokenise(String eq) {
-    Pattern stringPattern = Pattern.compile("[z*/+\\-^]|\\d+|[a-z]+", Pattern.CASE_INSENSITIVE);
+    Pattern stringPattern = Pattern.compile("[z*/+\\-^]|\\d+|[a-z]+");
     Matcher m = stringPattern.matcher(eq);
-    ArrayList<MatchResult> matches = (ArrayList<MatchResult>) m.results().collect(Collectors.toList());
     ArrayList<Equation> tokens = new ArrayList<>();
-    for (int i = 0; i < matches.size(); i++) {
-      String token = matches.get(i).group();
+    while (m.find()) {
+      String token = m.group();
       tokens.add(new Equation(token));
     }
     return tokens;
@@ -178,20 +176,22 @@ public class Equation {
   }
 
   public static Equation parse(String eq) {
+    eq = eq.toLowerCase();
+    eq = eq.replaceAll("(\\d)([a-z])", "$1*$2");
     ArrayList<Equation> tokens = tokenise(eq);
     return reduce(tokens);
   }
 
   public String toString() {
     if (type == Type.STR) {
-      return "Equation(" + token + ")";
+      return "Eq(" + token + ")";
     } else if (type == Type.CONSTANT) {
-      return "Equation(" + data + ")";
+      return "Eq(" + data + ")";
     } else if (type == Type.VAR) {
-      return "Equation(VAR)";
+      return "Eq(VAR)";
     } else {
       String arString = Arrays.toString(args);
-      return "Equation(" + type + "," + arString + ")";
+      return "Eq(" + type + "," + arString + ")";
     }
   }
 
@@ -271,26 +271,118 @@ public class Equation {
         return new Equation(Type.ADD, ds.get(0), ds.get(1));
       case SUB:
         return new Equation(Type.SUB, ds.get(0), ds.get(1));
-      case COS:
+      case COS: {
         Equation first = new Equation(Type.MUL, new Equation(Type.SIN, args[0]), new Equation(new Complex(-1d)));
         Equation second = ds.get(0);
         return new Equation(Type.MUL, first, second);
-      case SIN:
-        // TODO sine function
-        return null;
-      case LN:
-        // TODO ln function
-        return null;
+      }
+      case SIN: {
+        Equation first = new Equation(Type.COS, args[0]);
+        Equation second = ds.get(0);
+        return new Equation(Type.MUL, first, second);
+      }
+      case LN: {
+        Equation first = new Equation(Type.DIV, new Equation(new Complex(1d)), args[0]);
+        Equation second = ds.get(0);
+        return new Equation(Type.MUL, first, second);
+      }
       default:
         throw new RuntimeException("Not yet implemented " + type);
     }
   }
 
+  public Equation simplify() {
+    Equation[] simple_args = new Equation[args.length];
+    for (int i = 0; i < this.args.length; i++) {
+      simple_args[i] = this.args[i].simplify();
+    }
+    if (this.type == Type.POW) {
+      if (simple_args[1].type == Type.CONSTANT) {
+        if (simple_args[1].data.equals(new Complex(0d))) {
+          // z^0 = 1
+          return new Equation(new Complex(1d));
+        }
+        if (simple_args[1].data.equals(new Complex(1d))) {
+          // z^1 = z
+          return simple_args[0];
+        }
+        if (simple_args[0].type == Type.CONSTANT) {
+          return new Equation(simple_args[0].data.pow(simple_args[1].data));
+        }
+      }
+    }
+    // MUL, DIV
+    if (this.type == Type.MUL) {
+      if (simple_args[1].type == Type.CONSTANT) {
+        if (simple_args[1].data.equals(new Complex(0d))) {
+          // z*0 = 0
+          return new Equation(new Complex(0d));
+        }
+        if (simple_args[1].data.equals(new Complex(1d))) {
+          // z*1 = z
+          return simple_args[0];
+        }
+        if (simple_args[0].type == Type.CONSTANT) {
+          return new Equation(simple_args[0].data.multiply(simple_args[1].data));
+        }
+      }
+    }
+    if (this.type == Type.DIV) {
+      if (simple_args[0].type == Type.CONSTANT) {
+        if (simple_args[0].data.equals(new Complex(0d))) {
+          // 0/z = 0
+          return new Equation(new Complex(0d));
+        }
+        if (simple_args[1].type == Type.CONSTANT) {
+          return new Equation(simple_args[0].data.divide(simple_args[1].data));
+        }
+      }
+      if (simple_args[1].type == Type.CONSTANT) {
+        if (simple_args[1].data.equals(new Complex(1d))) {
+          // z/1 = z
+          return simple_args[0];
+        }
+      }
+    }
+    if (this.type == Type.ADD) {
+      if (simple_args[0].type == Type.CONSTANT) {
+        if (simple_args[0].data.equals(new Complex(0d))) {
+          // 0+z=z
+          return simple_args[1];
+        }
+        if (simple_args[1].type == Type.CONSTANT) {
+          return new Equation(simple_args[0].data.add(simple_args[1].data));
+        }
+      }
+      if (simple_args[1].type == Type.CONSTANT) {
+        if (simple_args[1].data.equals(new Complex(0d))) {
+          // z+0=z
+          return simple_args[0];
+        }
+      }
+    }
+    if (this.type == Type.SUB) {
+      if (simple_args[0].type == Type.CONSTANT) {
+        if (simple_args[1].type == Type.CONSTANT) {
+          return new Equation(simple_args[0].data.sub(simple_args[1].data));
+        }
+      }
+      if (simple_args[1].type == Type.CONSTANT) {
+        if (simple_args[1].data.equals(new Complex(0d))) {
+          // z-0=z
+          return simple_args[0];
+        }
+      }
+    }
+    return this;
+  }
+
   public static void main(String[] args) {
-    Equation poly = Equation.parse("3*z^2+2*z");
+    Equation poly = Equation.parse("3z").simplify();
+    Equation derivative = poly.derivative().simplify();
     System.out.println(poly.toString());
     System.out.println(poly.f().apply(new Complex(3d, 1d)));
-    System.out.println(poly.derivative());
-    System.out.println(poly.derivative().f().apply(new Complex(3d)));
+    System.out.println(derivative);
+    System.out.println(derivative.f().apply(new Complex(3d)));
   }
 }

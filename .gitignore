@@ -1,2 +1,5 @@
 .replit
 *.class
+replit.nix
+.breakpoints
+*.jar
